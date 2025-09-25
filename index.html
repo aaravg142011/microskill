@@ -64,7 +64,8 @@
       margin: 8px; 
       transition: background 0.2s; 
     }
-    button:hover { background: #FF6666; }
+    button:hover:not(:disabled) { background: #FF6666; }
+    button:disabled { background: #666; cursor: not-allowed; }
     .feedback { 
       background: #1A1A1A; 
       border: 1px solid #FF4D4D; 
@@ -76,6 +77,8 @@
       white-space: pre-wrap; 
       animation: slideIn 0.5s ease-out; 
     }
+    .loading { color: #FF4D4D; font-style: italic; }
+    .error { color: #FF4D4D; background: #333; padding: 10px; border-radius: 4px; }
     .modal { 
       position: fixed; 
       top: 0; 
@@ -108,11 +111,12 @@
 <body>
   <div class="container">
     <h1>🎯 MicroSkill Snap</h1>
-    <div class="challenge-card" id="challenge">Click for your first challenge!</div>
-    <textarea id="answer" placeholder="Your 5-min response..."></textarea>
-    <button onclick="getChallenge()">New Challenge</button>
-    <button onclick="submitAnswer()">Submit & Get Feedback</button>
+    <div class="challenge-card" id="challenge">Loading your first challenge... <span class="loading">⏳</span></div>
+    <textarea id="answer" placeholder="Your 5-min response..." disabled></textarea>
+    <button id="newBtn" onclick="getChallenge()" disabled>Loading...</button>
+    <button id="submitBtn" onclick="submitAnswer()" disabled>Submit & Get Feedback</button>
     <div class="feedback" id="feedback" style="display:none;"></div>
+    <div id="error" class="error" style="display:none;"></div>
     <div id="modal" class="modal" style="display:none;">
       <div class="modal-content">
         <h2>Level Up! 🚀</h2>
@@ -129,58 +133,11 @@
     let feedback = '';
     let challengesDone = 0;
     let generator = null;
+    let aiLoaded = false;
 
-    // Skill Prompts
-    const skillPrompts = [
-      "Write a 50-word story about a lost astronaut.",
-      "Create a 3-step plan to pitch a startup idea.",
-      "Solve this puzzle: If 2x + 3 = 7, find x and explain.",
-      "Design a quick logo idea for a coffee shop in 3 adjectives.",
-      "Brainstorm 2 ways to improve your daily routine.",
-    ];
-
-    // Load AI model
-    async function loadModel() {
-      if (!generator) {
-        generator = await pipeline('text-generation', 'Xenova/distilgpt2');
-      }
-    }
-    loadModel();
-
-    // Get Challenge
-    async function getChallenge() {
-      if (!generator) return;
-      const prompt = skillPrompts[Math.floor(Math.random() * skillPrompts.length)];
-      const fullPrompt = `Create a fun, 5-minute skill challenge based on: ${prompt}. Keep it under 100 words, engaging for beginners.`;
-      const result = await generator(fullPrompt, { max_new_tokens: 50, temperature: 0.7 });
-      challenge = result[0].generated_text.replace(fullPrompt, '').trim() || prompt;
-      document.getElementById('challenge').textContent = challenge;
-      document.getElementById('answer').value = '';
-      document.getElementById('feedback').style.display = 'none';
-      challengesDone++;
-      if (challengesDone === 1) document.getElementById('challenge').style.animation = 'zoomIn 0.5s ease-out';
-    }
-
-    // Submit Answer
-    async function submitAnswer() {
-      answer = document.getElementById('answer').value;
-      if (!answer || !generator) return;
-      const fbPrompt = `Analyze this user answer: "${answer}" for the challenge: "${challenge}". Respond as a hype coach: Start with emoji encouragement, 1-2 specific tips, end with badge (e.g., 'Word Wizard 🏆') and streak. Under 80 words, fun tone. Example: "Nailed it! 🚀 Tip: Add metaphors. Badge: Cosmic Creator."`;
-      const result = await generator(fbPrompt, { max_new_tokens: 60, temperature: 0.8 });
-      feedback = result[0].generated_text.replace(fbPrompt, '').trim();
-      document.getElementById('feedback').textContent = feedback;
-      document.getElementById('feedback').style.display = 'block';
-      if (challengesDone >= 3) document.getElementById('modal').style.display = 'flex';
-    }
-
-    // Close Modal
-    function closeModal() {
-      document.getElementById('modal').style.display = 'none';
-    }
-
-    // Start with first challenge
-    getChallenge();
-  </script>
-</body>
-</html>
-
+    // Fallback Challenges (if AI fails)
+    const fallbackPrompts = [
+      "Write a 50-word story about a lost astronaut exploring a candy planet.",
+      "Create a 3-step plan to pitch a startup idea to a friend.",
+      "Solve this puzzle: If 2x + 3 = 7, find x and explain why it's useful in real life.",
+      "Design a quick
