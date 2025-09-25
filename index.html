@@ -1,205 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MicroSkill Snap</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <title>MicroSkill Blast ⚡</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      background-color: #1A1A1A;
-      color: #FFFFFF;
-      font-family: 'Inter', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-      padding: 0 16px;
-    }
-    @media (min-width: 768px) {
-      html, body { max-width: 600px; margin: 0 auto; }
-    }
-    .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
       text-align: center;
+      padding: 20px;
     }
-    h1 { color: #FF4D4D; font-size: 2rem; margin-bottom: 24px; }
-    .challenge-card {
-      background: #333333;
-      border: 1px solid #FF4D4D;
-      border-radius: 8px;
-      padding: 24px;
-      margin: 16px 0;
-      max-width: 500px;
-      width: 100%;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      animation: slideIn 0.3s ease-out;
+    #container {
+      max-width: 600px;
+      margin: auto;
+      background: rgba(0,0,0,0.6);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+    #challenge {
+      font-size: 1.2em;
+      margin: 20px 0;
+      padding: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
     }
     textarea {
       width: 100%;
-      max-width: 500px;
-      min-height: 100px;
-      padding: 8px;
-      background: #FFFFFF;
-      color: #1A1A1A;
-      border: 1px solid #333333;
-      border-radius: 6px;
-      font-size: 1rem;
-      resize: vertical;
-    }
-    textarea:focus { outline: none; border-color: #FF4D4D; }
-    button {
-      background: #FF4D4D;
-      color: #FFFFFF;
+      height: 80px;
+      border-radius: 10px;
       border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      font-size: 1rem;
-      cursor: pointer;
-      margin: 8px;
-      transition: background 0.2s;
-    }
-    button:hover:not(:disabled) { background: #FF6666; }
-    button:disabled { background: #666; cursor: not-allowed; }
-    .feedback {
-      background: #1A1A1A;
-      border: 1px solid #FF4D4D;
-      border-radius: 8px;
-      padding: 16px;
-      margin: 16px 0;
-      max-width: 500px;
-      width: 100%;
-      white-space: pre-wrap;
-      animation: slideIn 0.5s ease-out;
-    }
-    .loading { color: #FF4D4D; font-style: italic; }
-    .error {
-      color: #FF4D4D;
-      background: #333;
       padding: 10px;
-      border-radius: 4px;
+      font-size: 1em;
+      resize: none;
     }
-    @keyframes slideIn {
-      0% { opacity: 0; transform: translateY(20px); }
-      100% { opacity: 1; transform: translateY(0); }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      background: #ff9800;
+      color: white;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #ffa733;
+    }
+    #feedback {
+      margin-top: 20px;
+      font-style: italic;
+    }
+    #xp-bar {
+      height: 20px;
+      background: #444;
+      border-radius: 10px;
+      margin-top: 15px;
+      overflow: hidden;
+    }
+    #xp-fill {
+      height: 100%;
+      width: 0%;
+      background: #4caf50;
+      transition: width 0.5s;
+    }
+    #level {
+      margin-top: 10px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🎯 MicroSkill Snap</h1>
-    <div class="challenge-card" id="challenge">Loading AI... <span class="loading">⏳</span></div>
-    <textarea id="answer" placeholder="Your 5-min response..."></textarea>
-    <button id="newBtn">New Challenge</button>
-    <button id="submitBtn">Submit & Get Feedback</button>
-    <div class="feedback" id="feedback" style="display:none;"></div>
-    <div class="error" id="error" style="display:none;"></div>
+  <div id="container">
+    <h1>⚡ MicroSkill Blast ⚡</h1>
+    <div id="challenge">Loading your first challenge...</div>
+    <textarea id="answer" placeholder="Type your answer here..."></textarea>
+    <div>
+      <button id="submitBtn" disabled>Submit & Get Feedback</button>
+      <button id="newBtn" disabled>Next Challenge</button>
+    </div>
+    <div id="feedback"></div>
+    <div id="xp-bar"><div id="xp-fill"></div></div>
+    <div id="level">Level 1 | XP: 0/100</div>
   </div>
 
   <script type="module">
-    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
+    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers/dist/transformers.min.js';
 
-    let generator = null;
-    let aiLoaded = false;
-    let useAI = true;
-    let challengesDone = 0;
-    let currentChallenge = '';
+    let generator;
+    let pastChallenges = new Set();
+    let xp = 0;
+    let level = 1;
 
-    const fallbackPrompts = [
-      "Write a 40-word story about a time traveler in a bakery.",
-      "List 3 creative uses for a paperclip.",
-      "If you could add one rule to your school, what would it be?",
-      "Explain why cats would make good astronauts in 3 sentences.",
-      "Invent a new sport using only socks and chairs."
-    ];
-    let usedPrompts = [];
+    const challengeEl = document.getElementById('challenge');
+    const feedbackEl = document.getElementById('feedback');
+    const xpFill = document.getElementById('xp-fill');
+    const levelEl = document.getElementById('level');
+    const submitBtn = document.getElementById('submitBtn');
+    const newBtn = document.getElementById('newBtn');
+    const answerEl = document.getElementById('answer');
 
-    function getUniquePrompt() {
-      if (usedPrompts.length === fallbackPrompts.length) {
-        usedPrompts = [];
-      }
-      let available = fallbackPrompts.filter(p => !usedPrompts.includes(p));
-      let chosen = available[Math.floor(Math.random() * available.length)];
-      usedPrompts.push(chosen);
-      return chosen;
-    }
-
+    // Load the AI model
     async function loadModel() {
       try {
-        console.log("Loading AI model...");
-        generator = await pipeline('text-generation', 'Xenova/gpt2');
-        aiLoaded = true;
-        console.log("AI loaded!");
+        generator = await pipeline('text-generation', 'Xenova/distilgpt2');
+        enableUI();
         getChallenge();
       } catch (err) {
-        console.error("AI load failed:", err);
-        useAI = false;
-        getChallenge();
+        challengeEl.textContent = "⚠️ Failed to load AI. Refresh and try again.";
+        console.error(err);
       }
     }
 
+    function enableUI() {
+      submitBtn.disabled = false;
+      newBtn.disabled = false;
+      answerEl.disabled = false;
+    }
+
+    // Generate a unique challenge
     async function getChallenge() {
-      const challengeDiv = document.getElementById('challenge');
-      challengeDiv.textContent = "Generating challenge...";
+      challengeEl.textContent = "✨ Generating a new challenge...";
+      let prompt = "Generate a brand new, unique learning challenge under 25 words. " +
+                   "Make it creative and skill-based. Examples: 'List 3 healthy habits.' 'Solve 12*7-15.'";
+
       try {
-        if (useAI && aiLoaded && generator) {
-          const basePrompt = getUniquePrompt();
-          const fullPrompt = `Create a fun, unique, 5-minute skill challenge based on this idea: "${basePrompt}". Keep it under 80 words.`;
-          const result = await generator(fullPrompt, { max_new_tokens: 60, temperature: 0.8 });
-          currentChallenge = result[0].generated_text.replace(fullPrompt, '').trim();
-          if (!currentChallenge || currentChallenge.length < 10) {
-            currentChallenge = basePrompt;
-          }
-        } else {
-          currentChallenge = getUniquePrompt();
-        }
-        challengeDiv.textContent = currentChallenge;
-        document.getElementById('answer').value = '';
-        document.getElementById('feedback').style.display = 'none';
-        challengesDone++;
-      } catch (e) {
-        console.error("Challenge error:", e);
-        currentChallenge = getUniquePrompt();
-        challengeDiv.textContent = currentChallenge;
+        let output, text;
+        do {
+          output = await generator(prompt, { max_new_tokens: 40 });
+          text = output[0].generated_text.trim();
+        } while (pastChallenges.has(text) || text.length < 10);
+        
+        pastChallenges.add(text);
+        challengeEl.textContent = text;
+        feedbackEl.textContent = "";
+        answerEl.value = "";
+      } catch (err) {
+        console.error(err);
+        challengeEl.textContent = "⚠️ Error creating challenge.";
       }
     }
 
-    async function submitAnswer() {
-      const answer = document.getElementById('answer').value.trim();
+    // Evaluate answer with feedback
+    async function getFeedback() {
+      const answer = answerEl.value.trim();
       if (!answer) {
-        alert("Please enter an answer first!");
+        feedbackEl.textContent = "⚠️ Please write an answer first!";
         return;
       }
-      const feedbackDiv = document.getElementById('feedback');
-      feedbackDiv.style.display = 'block';
-      feedbackDiv.textContent = "Crafting feedback...";
+
+      feedbackEl.textContent = "✨ Evaluating your answer...";
+      const challenge = challengeEl.textContent;
+      const prompt = `Evaluate the answer: "${answer}" to the challenge: "${challenge}". 
+      Give personalized, specific feedback in 2 sentences.`;
 
       try {
-        if (useAI && aiLoaded && generator) {
-          const fbPrompt = `You are a hype coach. Give feedback on this answer: "${answer}" for the challenge: "${currentChallenge}". 
-          Start with emoji encouragement, add 1-2 specific tips, end with a fun badge and streak number ${challengesDone}. Keep it under 70 words.`;
-          const result = await generator(fbPrompt, { max_new_tokens: 80, temperature: 0.9 });
-          let feedback = result[0].generated_text.replace(fbPrompt, '').trim();
-          if (!feedback || feedback.length < 10) {
-            feedback = `Great try! 💪 Tip: Expand your detail. Badge: Creative Spark 🏆 Streak: ${challengesDone}`;
-          }
-          feedbackDiv.textContent = feedback;
-        } else {
-          feedbackDiv.textContent = `Nice effort! 🌟 Tip: Add more detail. Badge: Skill Starter 🏆 Streak: ${challengesDone}`;
-        }
-      } catch (e) {
-        console.error("Feedback error:", e);
-        feedbackDiv.textContent = `Good effort! ✨ Badge: Beginner Boost 🏆 Streak: ${challengesDone}`;
+        let output = await generator(prompt, { max_new_tokens: 80 });
+        let feedback = output[0].generated_text.trim();
+        feedbackEl.textContent = feedback;
+
+        awardXP(20); // 20 XP per completed challenge
+      } catch (err) {
+        console.error(err);
+        feedbackEl.textContent = "⚠️ Could not generate feedback.";
       }
     }
 
-    document.getElementById('newBtn').addEventListener('click', getChallenge);
-    document.getElementById('submitBtn').addEventListener('click', submitAnswer);
+    // XP and Level system
+    function awardXP(amount) {
+      xp += amount;
+      let xpNeeded = level * 100;
+      if (xp >= xpNeeded) {
+        xp -= xpNeeded;
+        level++;
+        alert(`🎉 Level Up! You are now Level ${level}`);
+      }
+      updateXPBar();
+    }
 
-    window.addEventListener('load', loadModel);
+    function updateXPBar() {
+      let xpNeeded = level * 100;
+      let percent = (xp / xpNeeded) * 100;
+      xpFill.style.width = percent + "%";
+      levelEl.textContent = `Level ${level} | XP: ${xp}/${xpNeeded}`;
+    }
+
+    // Event listeners
+    submitBtn.addEventListener('click', getFeedback);
+    newBtn.addEventListener('click', getChallenge);
+
+    // Start
+    loadModel();
   </script>
 </body>
 </html>
