@@ -82,22 +82,6 @@
       padding: 10px;
       border-radius: 4px;
     }
-    .modal {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    .modal-content {
-      background: #1A1A1A;
-      padding: 24px;
-      border-radius: 8px;
-      text-align: center;
-      max-width: 400px;
-    }
     @keyframes slideIn {
       0% { opacity: 0; transform: translateY(20px); }
       100% { opacity: 1; transform: translateY(0); }
@@ -108,9 +92,9 @@
   <div class="container">
     <h1>🎯 MicroSkill Snap</h1>
     <div class="challenge-card" id="challenge">Loading AI... <span class="loading">⏳</span></div>
-    <textarea id="answer" placeholder="Your 5-min response..." disabled></textarea>
-    <button id="newBtn" disabled>Loading...</button>
-    <button id="submitBtn" disabled>Submit & Get Feedback</button>
+    <textarea id="answer" placeholder="Your 5-min response..."></textarea>
+    <button id="newBtn">New Challenge</button>
+    <button id="submitBtn">Submit & Get Feedback</button>
     <div class="feedback" id="feedback" style="display:none;"></div>
     <div class="error" id="error" style="display:none;"></div>
   </div>
@@ -118,125 +102,103 @@
   <script type="module">
     import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
 
-    let challenge = '';
-    let answer = '';
-    let feedback = '';
-    let challengesDone = 0;
     let generator = null;
     let aiLoaded = false;
     let useAI = true;
-    let loadAttempts = 0;
-    const maxAttempts = 3;
+    let challengesDone = 0;
+    let currentChallenge = '';
 
     const fallbackPrompts = [
-      "Write a 50-word story about a lost astronaut exploring a candy planet.",
-      "Create a 3-step plan to pitch a startup idea to a friend.",
-      "Solve this puzzle: If 2x + 3 = 7, find x and explain why it's useful.",
-      "Design a quick logo idea for a coffee shop with 3 adjectives: cozy, bold, aromatic.",
-      "Brainstorm 2 ways to improve your daily routine for more energy."
+      "Write a 40-word story about a time traveler in a bakery.",
+      "List 3 creative uses for a paperclip.",
+      "If you could add one rule to your school, what would it be?",
+      "Explain why cats would make good astronauts in 3 sentences.",
+      "Invent a new sport using only socks and chairs."
     ];
+    let usedPrompts = [];
+
+    function getUniquePrompt() {
+      if (usedPrompts.length === fallbackPrompts.length) {
+        usedPrompts = [];
+      }
+      let available = fallbackPrompts.filter(p => !usedPrompts.includes(p));
+      let chosen = available[Math.floor(Math.random() * available.length)];
+      usedPrompts.push(chosen);
+      return chosen;
+    }
 
     async function loadModel() {
-      if (loadAttempts >= maxAttempts) {
-        showError('AI failed to load after 3 attempts – using fallback.');
-        useAI = false;
-        getFallbackChallenge();
-        return;
-      }
       try {
-        console.log(`Attempt ${loadAttempts + 1} to load AI...`);
-        generator = await pipeline('text-generation', 'Xenova/gpt2', { quantized: false });
+        console.log("Loading AI model...");
+        generator = await pipeline('text-generation', 'Xenova/gpt2');
         aiLoaded = true;
-        console.log('AI loaded successfully!');
-        document.getElementById('challenge').textContent = 'Click for your first challenge! 🎯';
-        document.getElementById('newBtn').disabled = false;
-        document.getElementById('newBtn').textContent = 'New Challenge';
-        document.getElementById('answer').disabled = false;
-        document.getElementById('submitBtn').disabled = false;
-        document.getElementById('error').style.display = 'none';
-        getChallenge(); // Auto-trigger first challenge
+        console.log("AI loaded!");
+        getChallenge();
       } catch (err) {
-        console.error('AI load failed:', err);
-        loadAttempts++;
-        setTimeout(loadModel, 2000);
+        console.error("AI load failed:", err);
+        useAI = false;
+        getChallenge();
       }
-    }
-
-    function showError(msg) {
-      const errorDiv = document.getElementById('error');
-      errorDiv.textContent = `Oops! ${msg}`;
-      errorDiv.style.display = 'block';
-      document.getElementById('newBtn').disabled = false;
-      document.getElementById('newBtn').textContent = 'New Challenge';
-      document.getElementById('answer').disabled = false;
-      document.getElementById('submitBtn').disabled = false;
-    }
-
-    function getFallbackChallenge() {
-      challenge = fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
-      document.getElementById('challenge').textContent = challenge;
-      challengesDone++;
-      document.getElementById('newBtn').disabled = false;
-      document.getElementById('newBtn').textContent = 'New Challenge';
-      document.getElementById('answer').disabled = false;
-      document.getElementById('submitBtn').disabled = false;
     }
 
     async function getChallenge() {
-      document.getElementById('newBtn').disabled = true;
-      document.getElementById('newBtn').textContent = 'Loading...';
-      document.getElementById('challenge').textContent = 'Generating challenge...';
+      const challengeDiv = document.getElementById('challenge');
+      challengeDiv.textContent = "Generating challenge...";
       try {
         if (useAI && aiLoaded && generator) {
-          const prompt = fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
-          const fullPrompt = `Create a fun, 5-minute skill challenge based on: ${prompt}. Keep it under 100 words, engaging for beginners.`;
-          const result = await generator(fullPrompt, { max_new_tokens: 50, temperature: 0.7 });
-          challenge = result[0].generated_text.replace(fullPrompt, '').trim() || 'Challenge generation failed, try again!';
-          if (!challenge || challenge.length < 10) {
-            throw new Error('Generated challenge too short or invalid');
+          const basePrompt = getUniquePrompt();
+          const fullPrompt = `Create a fun, unique, 5-minute skill challenge based on this idea: "${basePrompt}". Keep it under 80 words.`;
+          const result = await generator(fullPrompt, { max_new_tokens: 60, temperature: 0.8 });
+          currentChallenge = result[0].generated_text.replace(fullPrompt, '').trim();
+          if (!currentChallenge || currentChallenge.length < 10) {
+            currentChallenge = basePrompt;
           }
         } else {
-          getFallbackChallenge();
+          currentChallenge = getUniquePrompt();
         }
-        document.getElementById('challenge').textContent = challenge;
+        challengeDiv.textContent = currentChallenge;
         document.getElementById('answer').value = '';
         document.getElementById('feedback').style.display = 'none';
-      } catch (error) {
-        console.error('Challenge gen failed:', error);
-        showError('Challenge generation failed – using fallback.');
-        getFallbackChallenge();
-      } finally {
-        document.getElementById('newBtn').disabled = false;
-        document.getElementById('newBtn').textContent = 'New Challenge';
+        challengesDone++;
+      } catch (e) {
+        console.error("Challenge error:", e);
+        currentChallenge = getUniquePrompt();
+        challengeDiv.textContent = currentChallenge;
       }
     }
 
     async function submitAnswer() {
-      answer = document.getElementById('answer').value;
-      if (!answer) return alert('Please enter an answer first!');
-      document.getElementById('submitBtn').disabled = true;
-      document.getElementById('submitBtn').textContent = 'Generating...';
-      document.getElementById('feedback').textContent = 'Crafting feedback...';
-      document.getElementById('feedback').style.display = 'block';
+      const answer = document.getElementById('answer').value.trim();
+      if (!answer) {
+        alert("Please enter an answer first!");
+        return;
+      }
+      const feedbackDiv = document.getElementById('feedback');
+      feedbackDiv.style.display = 'block';
+      feedbackDiv.textContent = "Crafting feedback...";
+
       try {
         if (useAI && aiLoaded && generator) {
-          const fbPrompt = `Analyze this user answer: "${answer}" for the challenge: "${challenge}". Respond as a hype coach: Start with emoji encouragement, 1-2 specific tips, end with badge (e.g., 'Word Wizard 🏆') and streak. Under 80 words, fun tone.`;
-          const result = await generator(fbPrompt, { max_new_tokens: 60, temperature: 0.8 });
-          feedback = result[0].generated_text.replace(fbPrompt, '').trim() || 'Great effort! Keep going! 🎉';
+          const fbPrompt = `You are a hype coach. Give feedback on this answer: "${answer}" for the challenge: "${currentChallenge}". 
+          Start with emoji encouragement, add 1-2 specific tips, end with a fun badge and streak number ${challengesDone}. Keep it under 70 words.`;
+          const result = await generator(fbPrompt, { max_new_tokens: 80, temperature: 0.9 });
+          let feedback = result[0].generated_text.replace(fbPrompt, '').trim();
+          if (!feedback || feedback.length < 10) {
+            feedback = `Great try! 💪 Tip: Expand your detail. Badge: Creative Spark 🏆 Streak: ${challengesDone}`;
+          }
+          feedbackDiv.textContent = feedback;
         } else {
-          feedback = `Nice try! 💪 Tip: Add more details. Badge: Skill Starter 🏆 Streak: ${challengesDone}.`;
+          feedbackDiv.textContent = `Nice effort! 🌟 Tip: Add more detail. Badge: Skill Starter 🏆 Streak: ${challengesDone}`;
         }
-        document.getElementById('feedback').textContent = feedback;
-      } catch (error) {
-        console.error('Feedback gen failed:', error);
-        document.getElementById('feedback').textContent = `Good effort! 🌟 Tip: Expand your answer. Badge: Beginner Boost 🏆`;
-      } finally {
-        document.getElementById('submitBtn').disabled = false;
-        document.getElementById('submitBtn').textContent = 'Submit & Get Feedback';
+      } catch (e) {
+        console.error("Feedback error:", e);
+        feedbackDiv.textContent = `Good effort! ✨ Badge: Beginner Boost 🏆 Streak: ${challengesDone}`;
       }
     }
 
-    // Start Loading
+    document.getElementById('newBtn').addEventListener('click', getChallenge);
+    document.getElementById('submitBtn').addEventListener('click', submitAnswer);
+
     window.addEventListener('load', loadModel);
   </script>
 </body>
