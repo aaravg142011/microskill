@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MicroSkill Snap</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js?v=1"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js?v=2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { 
@@ -40,7 +40,7 @@
       animation: slideIn 0.3s ease-out; 
     }
     textarea { 
-      width: 100; 
+      width: 100%; /* Fixed from 100 to 100% */
       max-width: 500px; 
       min-height: 100px; 
       padding: 8px; 
@@ -128,6 +128,8 @@
   </div>
 
   <script type="module">
+    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js?v=2';
+
     let challenge = '';
     let answer = '';
     let feedback = '';
@@ -169,9 +171,6 @@
       }
       try {
         console.log(`Attempt ${loadAttempts + 1} to load AI...`);
-        if (typeof pipeline === 'undefined') {
-          throw new Error('Transformers.js CDN not loaded');
-        }
         generator = await pipeline('text-generation', 'Xenova/gpt2', { quantized: false });
         aiLoaded = true;
         console.log('AI loaded successfully!');
