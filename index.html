@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MicroSkill Snap</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js" defer></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { 
@@ -114,7 +114,7 @@
     <textarea id="answer" placeholder="Your 5-min response..." disabled></textarea>
     <button id="newBtn" onclick="getChallenge()" disabled>Loading...</button>
     <button id="submitBtn" onclick="submitAnswer()" disabled>Submit & Get Feedback</button>
-    <button id="retryBtn" onclick="retryLoad()" style="display:none;">Retry AI Load</button>
+    <button id="toggleAI" onclick="toggleAI()" style="display:none;">Toggle AI Mode</button>
     <div class="feedback" id="feedback" style="display:none;"></div>
     <div id="error" class="error" style="display:none;"></div>
     <div id="modal" class="modal" style="display:none;">
@@ -134,6 +134,7 @@
     let challengesDone = 0;
     let generator = null;
     let aiLoaded = false;
+    let useAI = true; // Toggle between AI and fallback
     let loadAttempts = 0;
     const maxAttempts = 3;
 
@@ -149,19 +150,20 @@
     // Show Error
     function showError(msg) {
       const errorDiv = document.getElementById('error');
-      errorDiv.textContent = `Oops! ${msg} (Check console or click Retry.)`;
+      errorDiv.textContent = `Oops! ${msg} (Check console or toggle AI mode.)`;
       errorDiv.style.display = 'block';
-      document.getElementById('retryBtn').style.display = 'inline-block';
+      document.getElementById('toggleAI').style.display = 'inline-block';
       document.getElementById('newBtn').disabled = false;
-      document.getElementById('newBtn').textContent = 'New Challenge (Fallback)';
+      document.getElementById('newBtn').textContent = 'New Challenge';
       document.getElementById('answer').disabled = false;
       document.getElementById('submitBtn').disabled = false;
     }
 
-    // Load AI Model with Retry
+    // Load AI Model
     async function loadModel() {
       if (loadAttempts >= maxAttempts) {
-        showError('AI failed to load after 3 attempts – using fallback.');
+        showError('AI failed to load after 3 attempts – toggling to fallback.');
+        useAI = false;
         getFallbackChallenge();
         return;
       }
@@ -178,7 +180,7 @@
         document.getElementById('newBtn').textContent = 'New Challenge';
         document.getElementById('answer').disabled = false;
         document.getElementById('submitBtn').disabled = false;
-        document.getElementById('retryBtn').style.display = 'none';
+        document.getElementById('toggleAI').style.display = 'none';
         document.getElementById('error').style.display = 'none';
         getChallenge();
       } catch (error) {
@@ -188,18 +190,20 @@
       }
     }
 
-    // Retry AI Load Manually
-    function retryLoad() {
-      loadAttempts = 0;
-      aiLoaded = false;
-      generator = null;
-      document.getElementById('challenge').innerHTML = 'Retrying AI load... <span class="loading">⏳</span>';
+    // Toggle AI Mode
+    function toggleAI() {
+      useAI = !useAI;
+      document.getElementById('challenge').innerHTML = useAI ? 'Loading AI... <span class="loading">⏳</span>' : 'Using fallback mode...';
       document.getElementById('newBtn').disabled = true;
       document.getElementById('submitBtn').disabled = true;
       document.getElementById('answer').disabled = true;
-      document.getElementById('retryBtn').style.display = 'none';
       document.getElementById('error').style.display = 'none';
-      loadModel();
+      if (useAI) {
+        loadAttempts = 0;
+        loadModel();
+      } else {
+        getFallbackChallenge();
+      }
     }
 
     // Fallback Challenge
@@ -219,7 +223,7 @@
       document.getElementById('newBtn').textContent = 'Loading...';
       document.getElementById('challenge').innerHTML = 'Generating challenge... <span class="loading">⏳</span>';
       try {
-        if (aiLoaded && generator) {
+        if (useAI && aiLoaded && generator) {
           const prompt = fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
           const fullPrompt = `Create a fun, 5-minute skill challenge based on: ${prompt}. Keep it under 100 words, engaging for beginners.`;
           const result = await generator(fullPrompt, { max_new_tokens: 50, temperature: 0.7 });
@@ -247,7 +251,7 @@
       document.getElementById('feedback').textContent = 'Crafting feedback... <span class="loading">⏳</span>';
       document.getElementById('feedback').style.display = 'block';
       try {
-        if (aiLoaded && generator) {
+        if (useAI && aiLoaded && generator) {
           const fbPrompt = `Analyze this user answer: "${answer}" for the challenge: "${challenge}". Respond as a hype coach: Start with emoji encouragement, 1-2 specific tips, end with badge (e.g., 'Word Wizard 🏆') and streak. Under 80 words, fun tone. Example: "Nailed it! 🚀 Tip: Add metaphors. Badge: Cosmic Creator."`;
           const result = await generator(fbPrompt, { max_new_tokens: 60, temperature: 0.8 });
           feedback = result[0].generated_text.replace(fbPrompt, '').trim();
