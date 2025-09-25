@@ -19,16 +19,14 @@
       border-radius: 15px;
       box-shadow: 0 0 15px rgba(0,0,0,0.7);
     }
-    h1 {
-      font-size: 2em;
-      margin-bottom: 10px;
-    }
+    h1 { font-size: 2em; margin-bottom: 10px; }
     #challenge {
       font-size: 1.2em;
       margin: 20px 0;
       padding: 10px;
       background: rgba(255,255,255,0.1);
       border-radius: 10px;
+      min-height: 50px;
     }
     textarea {
       width: 100%;
@@ -50,13 +48,8 @@
       color: white;
       transition: 0.2s;
     }
-    button:hover {
-      background: #ffa733;
-    }
-    #feedback {
-      margin-top: 20px;
-      font-style: italic;
-    }
+    button:hover { background: #ffa733; }
+    #feedback { margin-top: 20px; font-style: italic; }
     #xp-bar {
       height: 20px;
       background: #444;
@@ -70,10 +63,7 @@
       background: #4caf50;
       transition: width 0.5s;
     }
-    #level {
-      margin-top: 10px;
-      font-weight: bold;
-    }
+    #level { margin-top: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -95,8 +85,7 @@
 
     let generator;
     let pastChallenges = new Set();
-    let xp = 0;
-    let level = 1;
+    let xp = 0, level = 1;
 
     const challengeEl = document.getElementById('challenge');
     const feedbackEl = document.getElementById('feedback');
@@ -109,7 +98,7 @@
     // Load the AI model
     async function loadModel() {
       try {
-        generator = await pipeline('text-generation', 'Xenova/distilgpt2');
+        generator = await pipeline('text-generation', 'Xenova/gpt2-medium');
         enableUI();
         getChallenge();
       } catch (err) {
@@ -127,16 +116,15 @@
     // Generate a unique challenge
     async function getChallenge() {
       challengeEl.textContent = "✨ Generating a new challenge...";
-      let prompt = "Generate a brand new, unique learning challenge under 25 words. " +
-                   "Make it creative and skill-based. Examples: 'List 3 healthy habits.' 'Solve 12*7-15.'";
+      const basePrompt = "Create a fun, unique 5-minute skill challenge under 50 words. Make it creative, engaging, and not repetitive. Example: 'Invent 3 new uses for a paperclip.' Challenge:";
 
       try {
         let output, text;
         do {
-          output = await generator(prompt, { max_new_tokens: 40 });
-          text = output[0].generated_text.trim();
-        } while (pastChallenges.has(text) || text.length < 10);
-        
+          output = await generator(basePrompt, { max_new_tokens: 60, temperature: 0.9 });
+          text = output[0].generated_text.replace(basePrompt, "").trim();
+        } while (pastChallenges.has(text) || text.length < 15);
+
         pastChallenges.add(text);
         challengeEl.textContent = text;
         feedbackEl.textContent = "";
@@ -157,15 +145,13 @@
 
       feedbackEl.textContent = "✨ Evaluating your answer...";
       const challenge = challengeEl.textContent;
-      const prompt = `Evaluate the answer: "${answer}" to the challenge: "${challenge}". 
-      Give personalized, specific feedback in 2 sentences.`;
+      const fbPrompt = `Give short, specific feedback (max 2 sentences) on this answer: "${answer}" to the challenge: "${challenge}". Start positive, then give one clear improvement tip.`;
 
       try {
-        let output = await generator(prompt, { max_new_tokens: 80 });
-        let feedback = output[0].generated_text.trim();
+        let output = await generator(fbPrompt, { max_new_tokens: 60, temperature: 0.8 });
+        let feedback = output[0].generated_text.replace(fbPrompt, "").trim();
         feedbackEl.textContent = feedback;
-
-        awardXP(20); // 20 XP per completed challenge
+        awardXP(20);
       } catch (err) {
         console.error(err);
         feedbackEl.textContent = "⚠️ Could not generate feedback.";
@@ -191,11 +177,10 @@
       levelEl.textContent = `Level ${level} | XP: ${xp}/${xpNeeded}`;
     }
 
-    // Event listeners
+    // Events
     submitBtn.addEventListener('click', getFeedback);
     newBtn.addEventListener('click', getChallenge);
 
-    // Start
     loadModel();
   </script>
 </body>
