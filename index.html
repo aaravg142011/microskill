@@ -110,10 +110,11 @@
 <body>
   <div class="container">
     <h1>🎯 MicroSkill Snap</h1>
-    <div class="challenge-card" id="challenge">Loading your first challenge... <span class="loading">⏳</span></div>
+    <div class="challenge-card" id="challenge">Loading AI... <span class="loading">⏳</span></div>
     <textarea id="answer" placeholder="Your 5-min response..." disabled></textarea>
     <button id="newBtn" onclick="getChallenge()" disabled>Loading...</button>
     <button id="submitBtn" onclick="submitAnswer()" disabled>Submit & Get Feedback</button>
+    <button id="retryBtn" onclick="retryLoad()" style="display:none;">Retry AI Load</button>
     <div class="feedback" id="feedback" style="display:none;"></div>
     <div id="error" class="error" style="display:none;"></div>
     <div id="modal" class="modal" style="display:none;">
@@ -133,48 +134,70 @@
     let challengesDone = 0;
     let generator = null;
     let aiLoaded = false;
+    let loadAttempts = 0;
+    const maxAttempts = 3;
 
-    // Fallback Challenges (if AI fails)
+    // Fallback Challenges
     const fallbackPrompts = [
       "Write a 50-word story about a lost astronaut exploring a candy planet.",
       "Create a 3-step plan to pitch a startup idea to a friend.",
-      "Solve this puzzle: If 2x + 3 = 7, find x and explain why it's useful in real life.",
-      "Design a quick logo idea for a coffee shop using 3 adjectives: cozy, bold, aromatic.",
+      "Solve this puzzle: If 2x + 3 = 7, find x and explain why it's useful.",
+      "Design a quick logo idea for a coffee shop with 3 adjectives: cozy, bold, aromatic.",
       "Brainstorm 2 ways to improve your daily routine for more energy."
     ];
 
     // Show Error
     function showError(msg) {
       const errorDiv = document.getElementById('error');
-      errorDiv.textContent = `Oops! ${msg} (Check console or refresh.)`;
+      errorDiv.textContent = `Oops! ${msg} (Check console or click Retry.)`;
       errorDiv.style.display = 'block';
+      document.getElementById('retryBtn').style.display = 'inline-block';
       document.getElementById('newBtn').disabled = false;
       document.getElementById('newBtn').textContent = 'New Challenge (Fallback)';
       document.getElementById('answer').disabled = false;
       document.getElementById('submitBtn').disabled = false;
     }
 
-    // Load AI model
+    // Load AI Model with Retry
     async function loadModel() {
+      if (loadAttempts >= maxAttempts) {
+        showError('AI failed to load after 3 attempts – using fallback.');
+        getFallbackChallenge();
+        return;
+      }
       try {
-        console.log('Attempting to load AI model...');
+        console.log(`Attempt ${loadAttempts + 1} to load AI...`);
         if (typeof pipeline === 'undefined') {
-          throw new Error('Transformers.js CDN failed to load');
+          throw new Error('Transformers.js CDN not loaded');
         }
-        generator = await pipeline('text-generation', 'Xenova/distilgpt2', { quantized: false });
+        generator = await pipeline('text-generation', 'Xenova/gpt2', { quantized: false }); // Lighter model
         aiLoaded = true;
-        console.log('AI model loaded successfully!');
+        console.log('AI loaded successfully!');
         document.getElementById('challenge').innerHTML = 'Click for your first challenge! 🎯';
         document.getElementById('newBtn').disabled = false;
         document.getElementById('newBtn').textContent = 'New Challenge';
         document.getElementById('answer').disabled = false;
         document.getElementById('submitBtn').disabled = false;
-        getChallenge(); // Auto-start
+        document.getElementById('retryBtn').style.display = 'none';
+        document.getElementById('error').style.display = 'none';
+        getChallenge();
       } catch (error) {
         console.error('AI load failed:', error);
-        showError('AI model failed to load – using fallback mode.');
-        getFallbackChallenge();
+        loadAttempts++;
+        setTimeout(loadModel, 2000); // Retry after 2s
       }
+    }
+
+    // Retry AI Load Manually
+    function retryLoad() {
+      loadAttempts = 0;
+      document.getElementById('challenge').innerHTML = 'Retrying AI load... <span class="loading">⏳</span>';
+      document.getElementById('newBtn').disabled = true;
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('answer').disabled = true;
+      document.getElementById('retryBtn').style.display = 'none';
+      document.getElementById('error').style.display = 'none';
+      loadModel();
     }
 
     // Fallback Challenge
@@ -188,11 +211,11 @@
       document.getElementById('submitBtn').disabled = false;
     }
 
-    // Get Challenge (AI or Fallback)
+    // Get Challenge
     async function getChallenge() {
       document.getElementById('newBtn').disabled = true;
       document.getElementById('newBtn').textContent = 'Loading...';
-      document.getElementById('challenge').innerHTML = 'Generating challenge... ⏳';
+      document.getElementById('challenge').innerHTML = 'Generating challenge... <span class="loading">⏳</span>';
       try {
         if (aiLoaded && generator) {
           const prompt = fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
@@ -213,13 +236,13 @@
       }
     }
 
-    // Submit Answer (AI or Fallback)
+    // Submit Answer
     async function submitAnswer() {
       answer = document.getElementById('answer').value;
       if (!answer) return alert('Please enter an answer first!');
       document.getElementById('submitBtn').disabled = true;
       document.getElementById('submitBtn').textContent = 'Generating...';
-      document.getElementById('feedback').textContent = 'Crafting feedback... ⏳';
+      document.getElementById('feedback').textContent = 'Crafting feedback... <span class="loading">⏳</span>';
       document.getElementById('feedback').style.display = 'block';
       try {
         if (aiLoaded && generator) {
@@ -247,7 +270,7 @@
       document.getElementById('modal').style.display = 'none';
     }
 
-    // Start Loading on Page Load
+    // Start Loading
     window.addEventListener('load', loadModel);
   </script>
 </body>
