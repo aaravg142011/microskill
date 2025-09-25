@@ -12,7 +12,7 @@
       padding: 20px;
     }
     #container {
-      max-width: 600px;
+      max-width: 650px;
       margin: auto;
       background: rgba(0,0,0,0.6);
       padding: 20px;
@@ -22,11 +22,16 @@
     h1 { font-size: 2em; margin-bottom: 10px; }
     #challenge {
       font-size: 1.2em;
-      margin: 20px 0;
+      margin: 20px 0 5px 0;
       padding: 10px;
       background: rgba(255,255,255,0.1);
       border-radius: 10px;
       min-height: 50px;
+    }
+    #skill {
+      font-size: 0.95em;
+      color: #ffd700;
+      margin-bottom: 15px;
     }
     textarea {
       width: 100%;
@@ -49,7 +54,7 @@
       transition: 0.2s;
     }
     button:hover { background: #ffa733; }
-    #feedback { margin-top: 20px; font-style: italic; }
+    #feedback { margin-top: 20px; font-style: italic; min-height: 30px; }
     #xp-bar {
       height: 20px;
       background: #444;
@@ -69,8 +74,9 @@
 <body>
   <div id="container">
     <h1>⚡ MicroSkill Blast ⚡</h1>
-    <div id="challenge">Loading your first challenge...</div>
-    <textarea id="answer" placeholder="Type your answer here..."></textarea>
+    <div id="challenge">Loading first challenge...</div>
+    <div id="skill"></div>
+    <textarea id="answer" placeholder="Type your answer here..." disabled></textarea>
     <div>
       <button id="submitBtn" disabled>Submit & Get Feedback</button>
       <button id="newBtn" disabled>Next Challenge</button>
@@ -83,82 +89,11 @@
   <script type="module">
     import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers/dist/transformers.min.js';
 
-    let generator;
-    let pastChallenges = new Set();
+    // XP & Level system
     let xp = 0, level = 1;
-
-    const challengeEl = document.getElementById('challenge');
-    const feedbackEl = document.getElementById('feedback');
     const xpFill = document.getElementById('xp-fill');
     const levelEl = document.getElementById('level');
-    const submitBtn = document.getElementById('submitBtn');
-    const newBtn = document.getElementById('newBtn');
-    const answerEl = document.getElementById('answer');
 
-    // Load the AI model
-    async function loadModel() {
-      try {
-        generator = await pipeline('text-generation', 'Xenova/gpt2-medium');
-        enableUI();
-        getChallenge();
-      } catch (err) {
-        challengeEl.textContent = "⚠️ Failed to load AI. Refresh and try again.";
-        console.error(err);
-      }
-    }
-
-    function enableUI() {
-      submitBtn.disabled = false;
-      newBtn.disabled = false;
-      answerEl.disabled = false;
-    }
-
-    // Generate a unique challenge
-    async function getChallenge() {
-      challengeEl.textContent = "✨ Generating a new challenge...";
-      const basePrompt = "Create a fun, unique 5-minute skill challenge under 50 words. Make it creative, engaging, and not repetitive. Example: 'Invent 3 new uses for a paperclip.' Challenge:";
-
-      try {
-        let output, text;
-        do {
-          output = await generator(basePrompt, { max_new_tokens: 60, temperature: 0.9 });
-          text = output[0].generated_text.replace(basePrompt, "").trim();
-        } while (pastChallenges.has(text) || text.length < 15);
-
-        pastChallenges.add(text);
-        challengeEl.textContent = text;
-        feedbackEl.textContent = "";
-        answerEl.value = "";
-      } catch (err) {
-        console.error(err);
-        challengeEl.textContent = "⚠️ Error creating challenge.";
-      }
-    }
-
-    // Evaluate answer with feedback
-    async function getFeedback() {
-      const answer = answerEl.value.trim();
-      if (!answer) {
-        feedbackEl.textContent = "⚠️ Please write an answer first!";
-        return;
-      }
-
-      feedbackEl.textContent = "✨ Evaluating your answer...";
-      const challenge = challengeEl.textContent;
-      const fbPrompt = `Give short, specific feedback (max 2 sentences) on this answer: "${answer}" to the challenge: "${challenge}". Start positive, then give one clear improvement tip.`;
-
-      try {
-        let output = await generator(fbPrompt, { max_new_tokens: 60, temperature: 0.8 });
-        let feedback = output[0].generated_text.replace(fbPrompt, "").trim();
-        feedbackEl.textContent = feedback;
-        awardXP(20);
-      } catch (err) {
-        console.error(err);
-        feedbackEl.textContent = "⚠️ Could not generate feedback.";
-      }
-    }
-
-    // XP and Level system
     function awardXP(amount) {
       xp += amount;
       let xpNeeded = level * 100;
@@ -167,21 +102,99 @@
         level++;
         alert(`🎉 Level Up! You are now Level ${level}`);
       }
-      updateXPBar();
+      xpFill.style.width = (xp / (level*100) * 100) + "%";
+      levelEl.textContent = `Level ${level} | XP: ${xp}/${level*100}`;
     }
 
-    function updateXPBar() {
-      let xpNeeded = level * 100;
-      let percent = (xp / xpNeeded) * 100;
-      xpFill.style.width = percent + "%";
-      levelEl.textContent = `Level ${level} | XP: ${xp}/${xpNeeded}`;
+    // Challenge pool 200+ items with associated skill
+    const challenges = [
+      {text:"List 3 creative uses for a paperclip.", skill:"Creativity"},
+      {text:"Invent a 3-step game using only a pen and paper.", skill:"Problem-Solving"},
+      {text:"Design a 5-minute workout routine for someone at home.", skill:"Planning"},
+      {text:"Think of 3 ways to reduce screen time creatively.", skill:"Self-Management"},
+      {text:"Come up with a short story with 3 sentences about a lost cat.", skill:"Writing"},
+      {text:"List 3 unusual ways to fold a T-shirt quickly.", skill:"Problem-Solving"},
+      {text:"Brainstorm 3 ideas for decorating your room with recycled materials.", skill:"Creativity"},
+      {text:"Create 3 fun icebreaker questions for a new club.", skill:"Communication"},
+      {text:"Make a tiny invention using only coins and rubber bands.", skill:"Creativity"},
+      {text:"Think of 3 ways to memorize something faster.", skill:"Memory"},
+      // ... add more items up to 200
+    ];
+
+    let pastChallenges = new Set();
+
+    function getRandomChallenge() {
+      if(pastChallenges.size === challenges.length) pastChallenges.clear();
+      let challenge;
+      do {
+        challenge = challenges[Math.floor(Math.random() * challenges.length)];
+      } while (pastChallenges.has(challenge.text));
+      pastChallenges.add(challenge.text);
+      return challenge;
     }
 
-    // Events
+    // UI Elements
+    const challengeEl = document.getElementById('challenge');
+    const skillEl = document.getElementById('skill');
+    const answerEl = document.getElementById('answer');
+    const feedbackEl = document.getElementById('feedback');
+    const submitBtn = document.getElementById('submitBtn');
+    const newBtn = document.getElementById('newBtn');
+
+    let generator;
+
+    async function loadAI() {
+      try {
+        generator = await pipeline('text-generation', 'Xenova/gpt2-medium');
+        submitBtn.disabled = false;
+        newBtn.disabled = false;
+        answerEl.disabled = false;
+        showNewChallenge();
+      } catch(err) {
+        challengeEl.textContent = "⚠️ AI failed to load, using static challenges only.";
+        console.error(err);
+        showNewChallenge();
+      }
+    }
+
+    function showNewChallenge() {
+      const {text, skill} = getRandomChallenge();
+      challengeEl.textContent = text;
+      skillEl.textContent = "Skill: " + skill;
+      answerEl.value = "";
+      feedbackEl.textContent = "";
+    }
+
+    async function getFeedback() {
+      const answer = answerEl.value.trim();
+      if(!answer) {
+        feedbackEl.textContent = "⚠️ Please enter your answer!";
+        return;
+      }
+      const challenge = challengeEl.textContent;
+      feedbackEl.textContent = "✨ Generating feedback...";
+
+      if(generator){
+        try {
+          const prompt = `Give short, specific feedback (max 2 sentences) on this answer: "${answer}" to the challenge: "${challenge}". Start positive, then give one tip.`;
+          const result = await generator(prompt,{max_new_tokens:60, temperature:0.8});
+          let feedback = result[0].generated_text.replace(prompt,"").trim();
+          if(!feedback) feedback = "Great effort! Try adding more details.";
+          feedbackEl.textContent = feedback;
+        } catch {
+          feedbackEl.textContent = "⚠️ Could not generate feedback, nice try!";
+        }
+      } else {
+        feedbackEl.textContent = "Good try! Add more details next time.";
+      }
+
+      awardXP(20);
+    }
+
     submitBtn.addEventListener('click', getFeedback);
-    newBtn.addEventListener('click', getChallenge);
+    newBtn.addEventListener('click', showNewChallenge);
 
-    loadModel();
+    loadAI();
   </script>
 </body>
 </html>
