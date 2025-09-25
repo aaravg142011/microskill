@@ -76,10 +76,10 @@
     <h1>⚡ MicroSkill Blast ⚡</h1>
     <div id="challenge">Loading first challenge...</div>
     <div id="skill"></div>
-    <textarea id="answer" placeholder="Type your answer here..." disabled></textarea>
+    <textarea id="answer" placeholder="Type your answer here..."></textarea>
     <div>
-      <button id="submitBtn" disabled>Submit & Get Feedback</button>
-      <button id="newBtn" disabled>Next Challenge</button>
+      <button id="submitBtn">Submit & Get Feedback</button>
+      <button id="newBtn">Next Challenge</button>
     </div>
     <div id="feedback"></div>
     <div id="xp-bar"><div id="xp-fill"></div></div>
@@ -106,7 +106,7 @@
       levelEl.textContent = `Level ${level} | XP: ${xp}/${level*100}`;
     }
 
-    // Challenge pool 200+ items with associated skill
+    // 200+ challenge pool
     const challenges = [
       {text:"List 3 creative uses for a paperclip.", skill:"Creativity"},
       {text:"Invent a 3-step game using only a pen and paper.", skill:"Problem-Solving"},
@@ -118,7 +118,7 @@
       {text:"Create 3 fun icebreaker questions for a new club.", skill:"Communication"},
       {text:"Make a tiny invention using only coins and rubber bands.", skill:"Creativity"},
       {text:"Think of 3 ways to memorize something faster.", skill:"Memory"},
-      // ... add more items up to 200
+      // ... Add up to 200 similar items. You can copy-paste and expand.
     ];
 
     let pastChallenges = new Set();
@@ -146,13 +146,14 @@
     async function loadAI() {
       try {
         generator = await pipeline('text-generation', 'Xenova/gpt2-medium');
+        console.log("AI loaded successfully!");
+      } catch(err) {
+        console.warn("AI failed to load:", err);
+      } finally {
+        // Always enable UI
         submitBtn.disabled = false;
         newBtn.disabled = false;
         answerEl.disabled = false;
-        showNewChallenge();
-      } catch(err) {
-        challengeEl.textContent = "⚠️ AI failed to load, using static challenges only.";
-        console.error(err);
         showNewChallenge();
       }
     }
