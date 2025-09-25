@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MicroSkill Snap</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@stitches/react@1.2.8/dist/index.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js" defer></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      background-color: #1A1A1A; 
+      color: #FFFFFF; 
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: 0 16px;
+    }
+    @media (min-width: 768px) {
+      html, body { max-width: 600px; margin: 0 auto; }
+    }
+    .container { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      min-height: 100vh; 
+      text-align: center; 
+    }
+    h1 { color: #FF4D4D; font-size: 2rem; margin-bottom: 24px; }
+    .challenge-card { 
+      background: #333333; 
+      border: 1px solid #FF4D4D; 
+      border-radius: 8px; 
+      padding: 24px; 
+      margin: 16px 0; 
+      max-width: 500px; 
+      width: 100%; 
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+      animation: slideIn 0.3s ease-out; 
+    }
+    textarea { 
+      width: 100%; 
+      max-width: 500px; 
+      min-height: 100px; 
+      padding: 8px; 
+      background: #FFFFFF; 
+      color: #1A1A1A; 
+      border: 1px solid #333333; 
+      border-radius: 6px; 
+      font-size: 1rem; 
+      resize: vertical; 
+    }
+    textarea:focus { outline: none; border-color: #FF4D4D; }
+    button { 
+      background: #FF4D4D; 
+      color: #FFFFFF; 
+      border: none; 
+      padding: 12px 24px; 
+      border-radius: 6px; 
+      font-size: 1rem; 
+      cursor: pointer; 
+      margin: 8px; 
+      transition: background 0.2s; 
+    }
+    button:hover { background: #FF6666; }
+    .feedback { 
+      background: #1A1A1A; 
+      border: 1px solid #FF4D4D; 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin: 16px 0; 
+      max-width: 500px; 
+      width: 100%; 
+      white-space: pre-wrap; 
+      animation: slideIn 0.5s ease-out; 
+    }
+    .modal { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      bottom: 0; 
+      background: rgba(0,0,0,0.8); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 1000; 
+    }
+    .modal-content { 
+      background: #1A1A1A; 
+      padding: 24px; 
+      border-radius: 8px; 
+      text-align: center; 
+      max-width: 400px; 
+    }
+    @keyframes slideIn { 
+      0% { opacity: 0; transform: translateY(20px); } 
+      100% { opacity: 1; transform: translateY(0); } 
+    }
+    @keyframes zoomIn { 
+      0% { transform: scale(0.95); opacity: 0; } 
+      100% { transform: scale(1); opacity: 1; } 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 MicroSkill Snap</h1>
+    <div class="challenge-card" id="challenge">Click for your first challenge!</div>
+    <textarea id="answer" placeholder="Your 5-min response..."></textarea>
+    <button onclick="getChallenge()">New Challenge</button>
+    <button onclick="submitAnswer()">Submit & Get Feedback</button>
+    <div class="feedback" id="feedback" style="display:none;"></div>
+    <div id="modal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h2>Level Up! 🚀</h2>
+        <p>Unlock unlimited snaps for $3.99/mo?</p>
+        <button onclick="closeModal()">Later</button>
+        <button>Subscribe</button> <!-- Add Stripe later -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let challenge = '';
+    let answer = '';
+    let feedback = '';
+    let challengesDone = 0;
+    let generator = null;
+
+    // Skill Prompts
+    const skillPrompts = [
+      "Write a 50-word story about a lost astronaut.",
+      "Create a 3-step plan to pitch a startup idea.",
+      "Solve this puzzle: If 2x + 3 = 7, find x and explain.",
+      "Design a quick logo idea for a coffee shop in 3 adjectives.",
+      "Brainstorm 2 ways to improve your daily routine.",
+    ];
+
+    // Load AI model
+    async function loadModel() {
+      if (!generator) {
+        generator = await pipeline('text-generation', 'Xenova/distilgpt2');
+      }
+    }
+    loadModel();
+
+    // Get Challenge
+    async function getChallenge() {
+      if (!generator) return;
+      const prompt = skillPrompts[Math.floor(Math.random() * skillPrompts.length)];
+      const fullPrompt = `Create a fun, 5-minute skill challenge based on: ${prompt}. Keep it under 100 words, engaging for beginners.`;
+      const result = await generator(fullPrompt, { max_new_tokens: 50, temperature: 0.7 });
+      challenge = result[0].generated_text.replace(fullPrompt, '').trim() || prompt;
+      document.getElementById('challenge').textContent = challenge;
+      document.getElementById('answer').value = '';
+      document.getElementById('feedback').style.display = 'none';
+      challengesDone++;
+      if (challengesDone === 1) document.getElementById('challenge').style.animation = 'zoomIn 0.5s ease-out';
+    }
+
+    // Submit Answer
+    async function submitAnswer() {
+      answer = document.getElementById('answer').value;
+      if (!answer || !generator) return;
+      const fbPrompt = `Analyze this user answer: "${answer}" for the challenge: "${challenge}". Respond as a hype coach: Start with emoji encouragement, 1-2 specific tips, end with badge (e.g., 'Word Wizard 🏆') and streak. Under 80 words, fun tone. Example: "Nailed it! 🚀 Tip: Add metaphors. Badge: Cosmic Creator."`;
+      const result = await generator(fbPrompt, { max_new_tokens: 60, temperature: 0.8 });
+      feedback = result[0].generated_text.replace(fbPrompt, '').trim();
+      document.getElementById('feedback').textContent = feedback;
+      document.getElementById('feedback').style.display = 'block';
+      if (challengesDone >= 3) document.getElementById('modal').style.display = 'flex';
+    }
+
+    // Close Modal
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    // Start with first challenge
+    getChallenge();
+  </script>
+</body>
+</html>
+
