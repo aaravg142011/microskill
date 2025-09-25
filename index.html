@@ -32,4 +32,223 @@
       background: #333333; 
       border: 1px solid #FF4D4D; 
       border-radius: 8px; 
-      padding: 24px
+      padding: 24px; 
+      margin: 16px 0; 
+      max-width: 500px; 
+      width: 100%; 
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+      animation: slideIn 0.3s ease-out; 
+    }
+    textarea { 
+      width: 100%; 
+      max-width: 500px; 
+      min-height: 100px; 
+      padding: 8px; 
+      background: #FFFFFF; 
+      color: #1A1A1A; 
+      border: 1px solid #333333; 
+      border-radius: 6px; 
+      font-size: 1rem; 
+      resize: vertical; 
+    }
+    textarea:focus { outline: none; border-color: #FF4D4D; }
+    button { 
+      background: #FF4D4D; 
+      color: #FFFFFF; 
+      border: none; 
+      padding: 12px 24px; 
+      border-radius: 6px; 
+      font-size: 1rem; 
+      cursor: pointer; 
+      margin: 8px; 
+      transition: background 0.2s; 
+    }
+    button:hover:not(:disabled) { background: #FF6666; }
+    button:disabled { background: #666; cursor: not-allowed; }
+    .feedback { 
+      background: #1A1A1A; 
+      border: 1px solid #FF4D4D; 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin: 16px 0; 
+      max-width: 500px; 
+      width: 100%; 
+      white-space: pre-wrap; 
+      animation: slideIn 0.5s ease-out; 
+    }
+    .loading { color: #FF4D4D; font-style: italic; }
+    .error { color: #FF4D4D; background: #333; padding: 10px; border-radius: 4px; }
+    .modal { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      bottom: 0; 
+      background: rgba(0,0,0,0.8); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 1000; 
+    }
+    .modal-content { 
+      background: #1A1A1A; 
+      padding: 24px; 
+      border-radius: 8px; 
+      text-align: center; 
+      max-width: 400px; 
+    }
+    @keyframes slideIn { 
+      0% { opacity: 0; transform: translateY(20px); } 
+      100% { opacity: 1; transform: translateY(0); } 
+    }
+    @keyframes zoomIn { 
+      0% { transform: scale(0.95); opacity: 0; } 
+      100% { transform: scale(1); opacity: 1; } 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 MicroSkill Snap</h1>
+    <div class="challenge-card" id="challenge">Loading your first challenge... <span class="loading">⏳</span></div>
+    <textarea id="answer" placeholder="Your 5-min response..." disabled></textarea>
+    <button id="newBtn" onclick="getChallenge()" disabled>Loading...</button>
+    <button id="submitBtn" onclick="submitAnswer()" disabled>Submit & Get Feedback</button>
+    <div class="feedback" id="feedback" style="display:none;"></div>
+    <div id="error" class="error" style="display:none;"></div>
+    <div id="modal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h2>Level Up! 🚀</h2>
+        <p>Unlock unlimited snaps for $3.99/mo?</p>
+        <button onclick="closeModal()">Later</button>
+        <button>Subscribe</button> <!-- Add Stripe later -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let challenge = '';
+    let answer = '';
+    let feedback = '';
+    let challengesDone = 0;
+    let generator = null;
+    let aiLoaded = false;
+
+    // Fallback Challenges (if AI fails)
+    const fallbackPrompts = [
+      "Write a 50-word story about a lost astronaut exploring a candy planet.",
+      "Create a 3-step plan to pitch a startup idea to a friend.",
+      "Solve this puzzle: If 2x + 3 = 7, find x and explain why it's useful in real life.",
+      "Design a quick logo idea for a coffee shop using 3 adjectives: cozy, bold, aromatic.",
+      "Brainstorm 2 ways to improve your daily routine for more energy."
+    ];
+
+    // Show Error
+    function showError(msg) {
+      const errorDiv = document.getElementById('error');
+      errorDiv.textContent = `Oops! ${msg} (Check console or refresh.)`;
+      errorDiv.style.display = 'block';
+      document.getElementById('newBtn').disabled = false;
+      document.getElementById('newBtn').textContent = 'New Challenge (Fallback)';
+      document.getElementById('answer').disabled = false;
+      document.getElementById('submitBtn').disabled = false;
+    }
+
+    // Load AI model
+    async function loadModel() {
+      try {
+        console.log('Attempting to load AI model...');
+        if (typeof pipeline === 'undefined') {
+          throw new Error('Transformers.js CDN failed to load');
+        }
+        generator = await pipeline('text-generation', 'Xenova/distilgpt2', { quantized: false });
+        aiLoaded = true;
+        console.log('AI model loaded successfully!');
+        document.getElementById('challenge').innerHTML = 'Click for your first challenge! 🎯';
+        document.getElementById('newBtn').disabled = false;
+        document.getElementById('newBtn').textContent = 'New Challenge';
+        document.getElementById('answer').disabled = false;
+        document.getElementById('submitBtn').disabled = false;
+        getChallenge(); // Auto-start
+      } catch (error) {
+        console.error('AI load failed:', error);
+        showError('AI model failed to load – using fallback mode.');
+        getFallbackChallenge();
+      }
+    }
+
+    // Fallback Challenge
+    function getFallbackChallenge() {
+      challenge = fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
+      document.getElementById('challenge').textContent = challenge;
+      challengesDone++;
+      document.getElementById('newBtn').disabled = false;
+      document.getElementById('newBtn').textContent = 'New Challenge';
+      document.getElementById('answer').disabled = false;
+      document.getElementById('submitBtn').disabled = false;
+    }
+
+    // Get Challenge (AI or Fallback)
+    async function getChallenge() {
+      document.getElementById('newBtn').disabled = true;
+      document.getElementById('newBtn').textContent = 'Loading...';
+      document.getElementById('challenge').innerHTML = 'Generating challenge... ⏳';
+      try {
+        if (aiLoaded && generator) {
+          const prompt = fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
+          const fullPrompt = `Create a fun, 5-minute skill challenge based on: ${prompt}. Keep it under 100 words, engaging for beginners.`;
+          const result = await generator(fullPrompt, { max_new_tokens: 50, temperature: 0.7 });
+          challenge = result[0].generated_text.replace(fullPrompt, '').trim() || prompt;
+        } else {
+          getFallbackChallenge();
+        }
+        document.getElementById('challenge').textContent = challenge;
+        document.getElementById('answer').value = '';
+        document.getElementById('feedback').style.display = 'none';
+        if (challengesDone === 1) document.getElementById('challenge').style.animation = 'zoomIn 0.5s ease-out';
+      } catch (error) {
+        console.error('Challenge gen failed:', error);
+        showError('Challenge generation failed – using fallback.');
+        getFallbackChallenge();
+      }
+    }
+
+    // Submit Answer (AI or Fallback)
+    async function submitAnswer() {
+      answer = document.getElementById('answer').value;
+      if (!answer) return alert('Please enter an answer first!');
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('submitBtn').textContent = 'Generating...';
+      document.getElementById('feedback').textContent = 'Crafting feedback... ⏳';
+      document.getElementById('feedback').style.display = 'block';
+      try {
+        if (aiLoaded && generator) {
+          const fbPrompt = `Analyze this user answer: "${answer}" for the challenge: "${challenge}". Respond as a hype coach: Start with emoji encouragement, 1-2 specific tips, end with badge (e.g., 'Word Wizard 🏆') and streak. Under 80 words, fun tone. Example: "Nailed it! 🚀 Tip: Add metaphors. Badge: Cosmic Creator."`;
+          const result = await generator(fbPrompt, { max_new_tokens: 60, temperature: 0.8 });
+          feedback = result[0].generated_text.replace(fbPrompt, '').trim();
+        } else {
+          feedback = `Nice try! 💪 Tip: Add more details. Badge: Skill Starter 🏆 Streak: ${challengesDone}. Keep going!`;
+        }
+        document.getElementById('feedback').textContent = feedback;
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = 'Submit & Get Feedback';
+        if (challengesDone >= 3) document.getElementById('modal').style.display = 'flex';
+      } catch (error) {
+        console.error('Feedback gen failed:', error);
+        showError('Feedback generation failed – using basic response.');
+        document.getElementById('feedback').textContent = `Good effort! 🌟 Tip: Expand your answer. Badge: Beginner Boost 🏆`;
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = 'Submit & Get Feedback';
+      }
+    }
+
+    // Close Modal
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    // Start Loading on Page Load
+    window.addEventListener('load', loadModel);
+  </script>
+</body>
+</html>
