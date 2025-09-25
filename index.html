@@ -2,160 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MicroSkill Blast ⚡</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #1e3c72, #2a5298);
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
-    #container {
-      max-width: 700px;
-      margin: auto;
-      background: rgba(0,0,0,0.7);
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.7);
-    }
-    h1 { font-size: 2em; margin-bottom: 10px; }
-    #challenge { font-size: 1.2em; margin: 20px 0 5px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 10px; min-height: 50px; }
-    #skill { font-size: 0.95em; color: #ffd700; margin-bottom: 15px; }
-    textarea { width: 100%; height: 80px; border-radius: 10px; border: none; padding: 10px; font-size: 1em; resize: none; }
-    button { margin: 10px; padding: 10px 20px; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; background: #ff9800; color: white; transition: 0.2s; }
-    button:hover { background: #ffa733; }
-    #feedback { margin-top: 20px; font-style: italic; min-height: 30px; }
-    #xp-bar { height: 20px; background: #444; border-radius: 10px; margin-top: 15px; overflow: hidden; }
-    #xp-fill { height: 100%; width: 0%; background: #4caf50; transition: width 0.5s; }
-    #level { margin-top: 10px; font-weight: bold; }
-    #loginDiv { margin-bottom: 20px; }
-    #loginDiv input { padding:5px 10px; border-radius:5px; border:none; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="container">
     <h1>⚡ MicroSkill Blast ⚡</h1>
+
     <div id="loginDiv">
       <input id="usernameInput" placeholder="Enter your username" />
       <button id="loginBtn">Login</button>
     </div>
+
     <div id="challenge">Login to start!</div>
     <div id="skill"></div>
     <textarea id="answer" placeholder="Type your answer here..." disabled></textarea>
+
     <div>
       <button id="submitBtn" disabled>Submit & Get Feedback</button>
       <button id="newBtn" disabled>Next Challenge</button>
     </div>
+
     <div id="feedback"></div>
+
     <div id="xp-bar"><div id="xp-fill"></div></div>
     <div id="level">Level 1 | XP: 0/100</div>
   </div>
 
-  <script>
-    // ===== Login & LocalStorage =====
-    let username = "";
-    document.getElementById('loginBtn').addEventListener('click',()=>{
-      const name = document.getElementById('usernameInput').value.trim();
-      if(!name){ alert("Enter a username!"); return; }
-      username = name;
-      document.getElementById('loginDiv').style.display = 'none';
-      document.getElementById('answer').disabled = false;
-      document.getElementById('submitBtn').disabled = false;
-      document.getElementById('newBtn').disabled = false;
-      loadUserData();
-      showNewChallenge();
-    });
-
-    // ===== XP & Level system =====
-    let xp=0, level=1, streak=0;
-    const xpFill = document.getElementById('xp-fill');
-    const levelEl = document.getElementById('level');
-
-    function awardXP(amount){
-      xp += amount;
-      streak++;
-      let xpNeeded = level*100;
-      if(xp>=xpNeeded){
-        xp-=xpNeeded;
-        level++;
-        alert(`🎉 Level Up! You are now Level ${level}`);
-      }
-      xpFill.style.width=(xp/(level*100)*100)+"%";
-      levelEl.textContent=`Level ${level} | XP: ${xp}/${level*100} | Streak: ${streak}`;
-      saveUserData();
-    }
-
-    function saveUserData(){
-      localStorage.setItem(username, JSON.stringify({xp, level, streak, pastChallenges:[...pastChallenges]}));
-    }
-
-    function loadUserData(){
-      const data = JSON.parse(localStorage.getItem(username));
-      if(data){
-        xp=data.xp; level=data.level; streak=data.streak;
-        pastChallenges = new Set(data.pastChallenges);
-        xpFill.style.width=(xp/(level*100)*100)+"%";
-        levelEl.textContent=`Level ${level} | XP: ${xp}/${level*100} | Streak: ${streak}`;
-      }
-    }
-
-    // ===== Challenges =====
-    const challenges = [
-      {text:"List 3 creative uses for a paperclip.", skill:"Creativity"},
-      {text:"Invent a 3-step game using only a pen and paper.", skill:"Problem-Solving"},
-      {text:"Design a 5-minute workout routine for someone at home.", skill:"Planning"},
-      {text:"Think of 3 ways to reduce screen time creatively.", skill:"Self-Management"},
-      {text:"Come up with a short story with 3 sentences about a lost cat.", skill:"Writing"},
-      {text:"List 3 unusual ways to fold a T-shirt quickly.", skill:"Problem-Solving"},
-      {text:"Brainstorm 3 ideas for decorating your room with recycled materials.", skill:"Creativity"},
-      {text:"Create 3 fun icebreaker questions for a new club.", skill:"Communication"},
-      {text:"Make a tiny invention using only coins and rubber bands.", skill:"Creativity"},
-      {text:"Think of 3 ways to memorize something faster.", skill:"Memory"},
-      // Add more to reach 200+ challenges
-    ];
-
-    let pastChallenges = new Set();
-
-    function getRandomChallenge(){
-      if(pastChallenges.size===challenges.length) pastChallenges.clear();
-      let ch;
-      do{ ch=challenges[Math.floor(Math.random()*challenges.length)]; } while(pastChallenges.has(ch.text));
-      pastChallenges.add(ch.text);
-      return ch;
-    }
-
-    // ===== UI =====
-    const challengeEl = document.getElementById('challenge');
-    const skillEl = document.getElementById('skill');
-    const answerEl = document.getElementById('answer');
-    const feedbackEl = document.getElementById('feedback');
-    const submitBtn = document.getElementById('submitBtn');
-    const newBtn = document.getElementById('newBtn');
-
-    function showNewChallenge(){
-      const {text, skill} = getRandomChallenge();
-      challengeEl.textContent = text;
-      skillEl.textContent = "Skill: "+skill;
-      answerEl.value="";
-      feedbackEl.textContent="";
-    }
-
-    // ===== Feedback generator (local, AI-like) =====
-    function generateFeedback(answer){
-      const positive=["Great job!","Awesome work!","Nice attempt!","Well done!"];
-      const tips=["Try adding more details.","Be more creative.","Think outside the box.","Give specific examples."];
-      const pos = positive[Math.floor(Math.random()*positive.length)];
-      const tip = tips[Math.floor(Math.random()*tips.length)];
-      return `${pos} Tip: ${tip}`;
-    }
-
-    submitBtn.addEventListener('click',()=>{
-      if(!answerEl.value.trim()){ feedbackEl.textContent="⚠️ Please enter your answer!"; return; }
-      feedbackEl.textContent = generateFeedback(answerEl.value.trim());
-      awardXP(20);
-    });
-    newBtn.addEventListener('click', showNewChallenge);
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
