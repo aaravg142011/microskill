@@ -40,7 +40,7 @@
       animation: slideIn 0.3s ease-out; 
     }
     textarea { 
-      width: 100%; 
+      width: 100; 
       max-width: 500px; 
       min-height: 100px; 
       padding: 8px; 
@@ -170,7 +170,7 @@
         if (typeof pipeline === 'undefined') {
           throw new Error('Transformers.js CDN not loaded');
         }
-        generator = await pipeline('text-generation', 'Xenova/gpt2', { quantized: false }); // Lighter model
+        generator = await pipeline('text-generation', 'Xenova/gpt2', { quantized: false });
         aiLoaded = true;
         console.log('AI loaded successfully!');
         document.getElementById('challenge').innerHTML = 'Click for your first challenge! 🎯';
@@ -191,6 +191,8 @@
     // Retry AI Load Manually
     function retryLoad() {
       loadAttempts = 0;
+      aiLoaded = false;
+      generator = null;
       document.getElementById('challenge').innerHTML = 'Retrying AI load... <span class="loading">⏳</span>';
       document.getElementById('newBtn').disabled = true;
       document.getElementById('submitBtn').disabled = true;
